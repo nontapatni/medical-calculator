@@ -1,46 +1,48 @@
-// 1. รอให้เอกสาร HTML ถูกโหลดเสร็จ แล้วรอฟังเหตุการณ์ 'submit' จาก Form ID 'bmi-form'
-document.getElementById('bmi-form').addEventListener('submit', function(event) {
-    
-    // สำคัญมาก! ป้องกันไม่ให้หน้าเว็บโหลดซ้ำเมื่อกดปุ่ม Submit
+// กำหนดค่าคงที่สำหรับเวลาในหน่วยมิลลิวินาที
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+const DAYS_IN_GESTATION = 280; // 40 สัปดาห์
+
+document.getElementById('ga-form').addEventListener('submit', function(event) {
     event.preventDefault(); 
 
-    // 2. ดึงค่าจากช่อง Input
-    //   - ดึงค่าจาก ID 'weight' (น้ำหนัก)
-    //   - ใช้ parseFloat() เพื่อแปลงค่าข้อความที่ได้มาให้เป็นตัวเลขทศนิยม
-    const weight = parseFloat(document.getElementById('weight').value);
-    const height = parseFloat(document.getElementById('height').value);
-
-    // 3. ตรวจสอบความถูกต้องของค่าที่ป้อน
-    if (weight > 0 && height > 0) {
-        
-        // 4. คำนวณ BMI ตามสูตร: weight / (height * height)
-        const bmi = weight / (height * height);
-
-        // 5. แสดงผลลัพธ์
-        
-        //   - แสดงค่า BMI (ทศนิยม 2 ตำแหน่ง) ไปยัง ID 'bmi-value'
-        document.getElementById('bmi-value').textContent = bmi.toFixed(2);
-        
-        //   - แสดงการแปลผลไปยัง ID 'bmi-status'
-        document.getElementById('bmi-status').textContent = getBmiStatus(bmi);
-    } else {
-        // หากป้อนค่าไม่ถูกต้อง (เช่น 0 หรือค่าว่าง)
-        document.getElementById('bmi-value').textContent = "โปรดตรวจสอบค่า";
-        document.getElementById('bmi-status').textContent = "---";
+    // 1. ดึงค่า LMP จาก Input
+    const lmpDateString = document.getElementById('lmp-date').value;
+    
+    if (!lmpDateString) {
+        alert("กรุณาป้อนวัน LMP");
+        return;
     }
+
+    // แปลง LMP เป็น Object Date
+    const lmp = new Date(lmpDateString);
+    
+    // กำหนดวันที่ตรวจ คือ 'วันนี้' (สามารถเปลี่ยนเป็นวันที่ผู้ใช้เลือกได้)
+    const currentDate = new Date();
+    
+    // เนื่องจาก Date object ใน JS มักมีปัญหา Timezone 
+    // เราจะใช้การลบค่า Time Stamp (มิลลิวินาที) แทน
+    
+    // 2. คำนวณจำนวนวันทั้งหมดตั้งแต่วัน LMP จนถึงวันนี้
+    // ค่า .getTime() คือจำนวนมิลลิวินาทีตั้งแต่ปี 1970
+    const timeDifference = currentDate.getTime() - lmp.getTime();
+    
+    // ป้องกันกรณีที่ LMP เป็นวันในอนาคต
+    if (timeDifference < 0) {
+        alert("วัน LMP ไม่ควรเป็นวันในอนาคต");
+        return;
+    }
+
+    const totalDays = Math.floor(timeDifference / MS_PER_DAY);
+    
+    // 3. แปลงเป็น สัปดาห์ (Weeks) และ วัน (Days)
+    const weeks = Math.floor(totalDays / 7);
+    const days = totalDays % 7;
+
+    // 4. คำนวณ EDD (วันครบกำหนดคลอด)
+    // EDD = LMP + 280 วัน
+    const edd = new Date(lmp.getTime() + (DAYS_IN_GESTATION * MS_PER_DAY));
+
+    // 5. แสดงผลลัพธ์
+    document.getElementById('ga-value').textContent = `${weeks} สัปดาห์ ${days} วัน`;
+    document.getElementById('edd-value').textContent = edd.toLocaleDateString('th-TH'); // แสดงผลตามรูปแบบวันที่ไทย
 });
-
-// ----------------------------------------------------
-// ฟังก์ชันเสริม: สำหรับการแปลผล BMI (Classification)
-// ----------------------------------------------------
-function getBmiStatus(bmi) {
-    if (bmi < 18.5) {
-        return 'ผอมเกินไป (Underweight)';
-    } else if (bmi >= 18.5 && bmi <= 24.9) {
-        return 'น้ำหนักปกติ (Normal Weight)';
-    } else if (bmi >= 25 && bmi <= 29.9) {
-        return 'น้ำหนักเกิน (Overweight)';
-    } else {
-        return 'โรคอ้วน (Obesity)';
-    }
-}
